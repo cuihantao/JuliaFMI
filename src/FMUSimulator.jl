@@ -513,6 +513,7 @@ function my_unzip(target::String, destinationDir::String)
         mkpath(destinationDir)
     end
 
+    # TODO Change! Use unzip on unix systems and 7zip on windows (bundled with julia)
     try
         #use unzip
         run(Cmd(`unzip -qo $target`, dir = destinationDir))
@@ -684,7 +685,7 @@ function findEvent(fmu::FMU)
         steps += 1
 
         # Evaluate eventIndicators in center of intervall
-        centerTime = 0.5*(rightTime - leftTime)
+        centerTime = 0.5*(rightTime + leftTime)
         setTime!(fmu, centerTime, false)
         getEventIndicators!(fmu)
         centerEventIndicators = copy(fmu.simulationData.eventIndicators)     # TODO Do I need to copy here?
@@ -775,7 +776,8 @@ function main(pathToFMU::String)
         fmi2SetupExperiment(fmu, 0)
 
         # Set start time
-        setTime!(fmu, 0.0)
+        setTime!(fmu, 0.0, true)
+        nextTime = fmu.experimentData.stopTime
 
         # Set initial variables with intial="exact" or "approx"
 
@@ -790,9 +792,11 @@ function main(pathToFMU::String)
         while fmu.eventInfo.newDiscreteStatesNeeded
             fmi2NewDiscreteStates!(fmu)
             if fmu.eventInfo.terminateSimulation
-                error()
+                error("FMU was terminated in Event at time $(fmu.simulationData.time)")
             end
         end
+        # Initialize event indicators
+        getEventIndicators!(fmu)
 
         # Enter Continuous time mode
         fmi2EnterContinuousTimeMode(fmu)
@@ -801,7 +805,8 @@ function main(pathToFMU::String)
         getContinuousStates!(fmu)
 
         # retrive solution
-        getAllVariables!(fmu)           # TODO Is not returning der(x) correctly
+        getAllVariables!(fmu)       # TODO Is not returning der(x) correctly
+                                    # Needs to call fmi2GetXXX of course...
         writeValuesToCSV(fmu)
 
         # Iterate with explicit euler method
@@ -811,14 +816,8 @@ function main(pathToFMU::String)
             k += 1
             getDerivatives!(fmu)
 
-            # Compute next step size
-            if fmu.eventInfo.nextEventTimeDefined
-                h = min(fmu.experimentData.stepSize, fmu.eventInfo.nextEventTime - fmu.simulationData.time)
-            else
-                h = min(fmu.experimentData.stepSize, fmu.experimentData.stopTime - fmu.simulationData.time)
-            end
-
-            # Update time
+            # Compute next step size and update time
+            h = min(fmu.experimentData.stepSize, nextTime - fmu.simulationData.time)
             setTime!(fmu, fmu.simulationData.time + h)
 
             # Set states and perform euler step (x_k+1 = x_k + d/dx x_k*h)
@@ -827,23 +826,87 @@ function main(pathToFMU::String)
             end
             setContinuousStates!(fmu)
 
-            # Get event indicators and check for events
+            # Detect time events
+            timeEvent = abs(fmu.simulationData.time - nextTime) <= fmu.experimentData.stepSize       # TODO add handling of time events
+
+            # Detect events
+            #(eventFound, eventTime) = findEvent(fmu)
+            leftEventIndicators = copy(fmu.simulationData.eventIndicators)
+            getEventIndicators!(fmu)
+            rightEventIndicators = copy(fmu.simulationData.eventIndicators)
+            if arrayDiffSign(leftEventIndicators, rightEventIndicators)
+                eventFound = true
+            else
+                eventFound = false
+            end
+            if eventFound
+                println("Event found in intervall [$(fmu.simulationData.lastStepTime), $(fmu.simulationData.time)]")
+            end
 
             # Inform the model abaut an accepted step
             (enterEventMode, terminateSimulation) = fmi2CompletedIntegratorStep(fmu, true)
-            if enterEventMode
-                error("Should now enter Event mode...")
+            if terminateSimulation
+                error("FMU was terminated after completed integrator step at time $(fmu.simulationData.time)")
             end
 
-            if terminateSimulation
-                error("Solution got terminated bevore reaching end time.")
+            # Handle events
+            if timeEvent || eventFound || enterEventMode
+                if timeEvent
+                    eventName = "time"
+                elseif eventFound
+                    eventName = "state"
+                else
+                    eventName = "step"
+                end
+                println("Handling an $eventName event.")
+                println("Enter Event Mode at time $(fmu.simulationData.time)")
+
+                # Save variable values to csv
+                # TODO Add
+
+                fmi2EnterEventMode(fmu)
+
+                # Event iteration
+                fmu.eventInfo.newDiscreteStatesNeeded = true
+                fmu.eventInfo.terminateSimulation = false
+                while fmu.eventInfo.newDiscreteStatesNeeded
+                    # Update discrete states
+                    fmu.eventInfo = fmi2NewDiscreteStates!(fmu)
+                    if fmu.eventInfo.terminateSimulation
+                        error("FMU was terminated in event at time $(fmu.simulationData.time)")
+                    end
+                end
+
+                # Update changed continuous states
+                getContinuousStates!(fmu)
+
+                # Enter continuous-time mode
+                fmi2EnterContinuousTimeMode(fmu)
+                getEventIndicators!(fmu)
+
+                # Retrieve solution at simulation restart
+                getAllVariables!(fmu)
+                if fmu.eventInfo.valuesOfContinuousStatesChanged
+                    # TODO check if this is working correctly
+                    getContiuousStates(fmu)
+                end
+
+                # Check if nominals changed
+                if fmu.eventInfo.nominalsOfContinuousStatesChanged
+                    error("Nominals not handled at the moment")
+                    # getNominalsOfContinuousStates(fmu)
+                end
+
+                if fmu.eventInfo.nextEventTimeDefined
+                    nextTime = min(fmu.eventInfo.nextEventTime, fmu.experimentData.stopTime)
+                else
+                    nextTime = fmu.experimentData.stopTime
+                end
             end
 
             # save results
-            getAllVariables!(fmu)
+            getAllVariables!(fmu) # TODO check if this is working correctly
             writeValuesToCSV(fmu)
-
-            # Handle events
         end
 
         # Terminate Simulation
