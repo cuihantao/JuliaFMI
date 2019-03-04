@@ -34,6 +34,11 @@ function updateFmiCrossTest()
 end
 
 
+"""
+    runFMICrossTests()
+
+Run and test all fmi-cross-test that are supportet on current system.
+"""
 function runFMICrossTests()
 
     # Check if repository is up to date

@@ -849,9 +849,6 @@ function main(pathToFMU::String)
             else
                 eventFound = false
             end
-            if eventFound
-                println("Event found in intervall [$(fmu.simulationData.lastStepTime), $(fmu.simulationData.time)]")
-            end
 
             # Inform the model abaut an accepted step
             (enterEventMode, terminateSimulation) = fmi2CompletedIntegratorStep(fmu, true)
