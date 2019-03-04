@@ -264,7 +264,7 @@ function readModelDescription(pathToModelDescription::String)
 
     catch err
         if isa(err, KeyError)
-            error("While parsing modelDescription: Non-optinal element \"$(err.key)\" not found")
+            error("While parsing modelDescription: Non-optional element \"$(err.key)\" not found")
         else
             rethrow(err)
         end
@@ -320,6 +320,9 @@ function initializeSimulationData(modelDescription::ModelDescription,
 
     # Fill real simulation data with start value, value reference and name
     for (i,scalarVar) in enumerate(modelDescription.modelVariables[1:modelData.numberOfReals])
+        if typeof(scalarVar.typeSpecificProperties)!=RealProperties
+            error("Wrong type of scalarVariable. Expected Real but got $(typeof(scalarVar.typeSpecificProperties))")
+        end
         simulationData.modelVariables.reals[i] =
             RealVariable(scalarVar.typeSpecificProperties.start,
                          scalarVar.valueReference,
@@ -330,6 +333,9 @@ function initializeSimulationData(modelDescription::ModelDescription,
     # Fill integer simulation data
     if (modelData.numberOfInts > 0)
         for (i,scalarVar) in enumerate(modelDescription.modelVariables[prevVars+1:prevVars+modelData.numberOfInts])
+            if typeof(scalarVar.typeSpecificProperties)!=IntegerProperties
+                error("Wrong type of scalarVariable. Expected Int but got $(typeof(scalarVar.typeSpecificProperties))")
+            end
             simulationData.modelVariables.ints[i] =
                 IntVariable(scalarVar.typeSpecificProperties.start,
                             scalarVar.valueReference,
@@ -341,6 +347,9 @@ function initializeSimulationData(modelDescription::ModelDescription,
     # Fill boolean simulation data
     if (modelData.numberOfBools > 0)
         for (i,scalarVar) in enumerate(modelDescription.modelVariables[prevVars+1:prevVars+modelData.numberOfBools])
+            if typeof(scalarVar.typeSpecificProperties)!=BooleanProperties
+                error("Wrong type of scalarVariable. Expected Bool but got $(typeof(scalarVar.typeSpecificProperties))")
+            end
             simulationData.modelVariables.bools[i] =
                 BoolVariable(scalarVar.typeSpecificProperties.start,
                              scalarVar.valueReference,
@@ -352,6 +361,9 @@ function initializeSimulationData(modelDescription::ModelDescription,
     # Fill string simulation data
     if (modelData.numberOfStrings > 0)
         for (i,scalarVar) in enumerate(modelDescription.modelVariables[prevVars+1:prevVars+modelData.numberOfStrings])
+            if typeof(scalarVar.typeSpecificProperties)!=StringProperties
+                error("Wrong type of scalarVariable. Expected String but got $(typeof(scalarVar.typeSpecificProperties))")
+            end
             simulationData.modelVariables.strings[i] =
                 StringVariable(scalarVar.typeSpecificProperties.start,
                                scalarVar.valueReference,
