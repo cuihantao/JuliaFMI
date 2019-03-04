@@ -266,6 +266,10 @@ struct IntegerAttributes
     quantity::String
     min::Int
     max::Int
+
+    # Inner constructors
+    IntegerAttributes()=new()
+    IntegerAttributes(quantity, min, max)=new(quantity, min, max)
 end
 
 
@@ -276,6 +280,7 @@ struct RealProperties
     derivative::UInt
     reinit::Bool
 
+    # Inner constructors
     RealProperties() = new()
     RealProperties(declaredType, variableAttributes, start, derivative, reinit) = new(declaredType, variableAttributes, start, derivative, reinit)
 end
@@ -285,7 +290,9 @@ struct IntegerProperties
     variableAttributes::IntegerAttributes
     start::Int
 
+    # Inner constructors
     IntegerProperies() = new()
+    IntegerProperties(declaredType, variableAttributes, start) = new(declaredType, variableAttributes, start)
 end
 
 struct BooleanProperties
