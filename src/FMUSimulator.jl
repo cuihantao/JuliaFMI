@@ -391,7 +391,7 @@ function loadFMU(pathToFMU::String, useTemp::Bool=false, overWriteTemp::Bool=tru
 
     # Split path
     fmu.FMUPath = pathToFMU
-    name = last(split(pathToFMU, "/"))
+    name = basename(pathToFMU)
 
     # Create temp folder
     if useTemp
@@ -421,10 +421,10 @@ function loadFMU(pathToFMU::String, useTemp::Bool=false, overWriteTemp::Bool=tru
 
     # pathToDLL
     if Sys.iswindows()
-        if ispath(string(fmu.tmpFolder, "binaries/win64/")) && Sys.WORD_SIZE==64
-            pathToDLL = string(fmu.tmpFolder, "binaries/win64/", name[1:end-4], ".dll")
-        elseif ispath(string(fmu.tmpFolder, "binaries/win32/"))
-            pathToDLL = string(fmu.tmpFolder, "binaries/win32/", name[1:end-4], ".dll")
+        if ispath(string(fmu.tmpFolder, "binaries\\win64\\")) && Sys.WORD_SIZE==64
+            pathToDLL = string(fmu.tmpFolder, "binaries\\win64\\", name[1:end-4], ".dll")
+        elseif ispath(string(fmu.tmpFolder, "binaries\\win32\\"))
+            pathToDLL = string(fmu.tmpFolder, "binaries\\win32\\", name[1:end-4], ".dll")
         else
             error("No DLL found matching Windows OS and word size.")
         end
@@ -455,8 +455,6 @@ function loadFMU(pathToFMU::String, useTemp::Bool=false, overWriteTemp::Bool=tru
     fmu.logFile = open("$(fmu.modelName).log", "w")
 
     # load shared library with FMU
-    # TODO export DL_LOAD_PATH="/usr/lib/x86_64-linux-gnu" on unix systems
-    # push!(DL_LOAD_PATH, "/usr/lib/x86_64-linux-gnu") maybe???
     fmu.libHandle = dlopen(pathToDLL)
 
     # Load hared library with logger function
