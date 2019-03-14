@@ -12,6 +12,7 @@ before_install:
 
 before_script:
   - cd test && git clone https://github.com/modelica/fmi-cross-check.git
+  - cd ..
   - if [ ! -d ./bin/unix64/ ]; then mkdir ./bin/unix64/; fi
   - gcc -shared src/logger.c -fPIC -o bin/unix64/logger.so
 
