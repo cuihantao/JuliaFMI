@@ -55,14 +55,7 @@ function readModelDescription(pathToModelDescription::String)
         md.license = get(attributes, "license", "")
         md.generationTool = get(attributes, "generationTool", "")
         md.generationDateAndTime = get(attributes, "generationDateAndTime", "")
-
-        if attributes["variableNamingConvention"]=="flat"
-            md.variableNamingConvention =  flat
-        elseif attributes["variableNamingConvention"]=="structured"
-            md.variableNamingConvention =  structured
-        else
-            error("Unknown variableNamingConvention")
-        end
+        md.variableNamingConvention = get(attributes, "variableNamingConvention", flat)
         md.numberOfEventIndicators = parse(Int, attributes["numberOfEventIndicators"])
 
         # Get attributes of tag <ModelExchange>

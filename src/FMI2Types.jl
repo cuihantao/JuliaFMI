@@ -11,6 +11,15 @@ end
     flat
     structured
 end
+function NamingConvention(in::String)
+    if in=="flat"
+        return flat
+    elseif in == "structured"
+        return structured
+    else
+        error("Can not convert String \"$in\" to NamingConvention.")
+    end
+end
 
 @enum ModelState begin
     modelUninstantiated
