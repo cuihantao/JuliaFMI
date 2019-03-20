@@ -27,10 +27,15 @@ function updateFmiCrossTest()
 
     if isdir("fmi-cross-check")
         # Update repository
+        repo = GitRepo(string(thisDir,"/fmi-cross-check"))
+        LibGit2.fetch(repo)
+        LibGit2.update!(repo, ".*")
+
     else
         # Clone repository
-        print("Cloning repository modelica/fmi-cross-check. ")
+        print("Cloning repository modelica/fmi-cross-check.")
         println("This may take some time.")
+        LibGit2.clone(https://github.com/modelica/fmi-cross-check.git)
     end
 end
 
@@ -246,4 +251,17 @@ function testTool(toolName::String, versions::Array{String,1}, tests)
             end
         end;
     end
+end
+
+"""
+
+Cleans up temoprary files created while testing.
+"""
+function cleanUpTests()
+
+    # Git clean in fmi-cross-check
+    repo = GitRepo(string(thisDir,"/fmi-cross-check"))
+    head_oid = LibGit2.head_oid(repo)
+    mode = LibGit2.Consts.RESET_HARD
+    LibGit2.reset!(repo, head_oid, mode)
 end

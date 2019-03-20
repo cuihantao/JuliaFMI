@@ -4,12 +4,12 @@ using DataFrames
 
 
 """
-    csvFilesEqual(csvFile1Path::String, csvFile1Path::String, epsilon::Float64)
+    csvFilesEqual(csvFile1Path::String, csvFile1Path::String, epsilon::Real)
 
 Checks if trajectories of variables in two CSV files are equal.
 """
 function csvFilesEqual(csvFile1Path::String, csvFile2Path::String,
-    epsilon::Float64)
+    epsilon::Real)
 
     # Load csv files
     csvData1 = CSV.read(csvFile1Path)
@@ -21,12 +21,12 @@ function csvFilesEqual(csvFile1Path::String, csvFile2Path::String,
 end
 
 """
-    csvFilesEqual(csvFile1Path::String, csvFile2Path::String, checkVars::Array{String,1}, epsilon::Float64)
+    csvFilesEqual(csvFile1Path::String, csvFile2Path::String, checkVars::Array{String,1}, epsilon::Real)
 
 Checks if trajectories of variables `checkVars` in two CSV files are equal.
 """
 function csvFilesEqual(csvFile1Path::String, csvFile2Path::String,
-    checkVars::Array{String,1}, epsilon::Float64)
+    checkVars::Array{String,1}, epsilon::Real)
 
     # Load csv files
     csvData1 = CSV.read(csvFile1Path)
@@ -38,18 +38,25 @@ end
 
 
 """
-    csvCompareVars(csvData1:::DataFrames.DataFrame, csvData2:::DataFrames.DataFrame, checkVars::Array{String,1}, epsilon::Float64)
+    csvCompareVars(csvData1:::DataFrames.DataFrame, csvData2:::DataFrames.DataFrame, checkVars::Array{Symbol,1}, epsilon::Real)
 
 Helper function to check if trajectories of variables `checkVars` in two
 DataFrames are equal.
 """
 function csvCompareVars(csvData1::DataFrames.DataFrame,
-    csvData2::DataFrames.DataFrame, checkVars::Array{String,1},
-    epsilon::Float64)
+    csvData2::DataFrames.DataFrame, checkVars::Array{Symbol,1},
+    epsilon::Real)
 
     # rename variables like der(x) to der_x_
     replaceNames!(csvData1)
     replaceNames!(csvData2)
+    newNames = Array{String}(undef, length(checkVars))
+    for (i,name) in enumerate(checkVars)
+        newNames[i] = String(checkVars[i])
+        newNames[i] = replace(newNames[i], "(" => "_")
+        newNames[i] = replace(newNames[i], ")" => "_")
+    end
+    checkVars = Symbol.(newNames)
 
     # Check if comparable
     if unique(names(csvData1)) != names(csvData1)
@@ -76,7 +83,8 @@ end
 Compares if two trajectories are equal by linear interpolation and comparing to
 definded error ϵ.
 """
-function trajectoriesEqual(trajectory1::Trajectory, trajectory2::Trajectory, epsilon)
+function trajectoriesEqual(trajectory1::Trajectory, trajectory2::Trajectory,
+    epsilon::Real)
 
     time1, values1 = Pair(trajectory1)
     time2, values2 = Pair(trajectory2)
