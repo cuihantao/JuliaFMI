@@ -3,42 +3,60 @@ Run tests from fmi-cross-check Git repository.
 """
 
 using Test
+using LibGit2
 
 thisDir = dirname(Base.source_path())
+fmiCrossCheckDir = string(thisDir,"/fmi-cross-check")
 include("$(dirname(thisDir))/src/FMUSimulator.jl")
 
 if Sys.iswindows()
-    fmiCrossCheckDir = string(thisDir, "/fmi-cross-check/fmus/2.0/me/win$(Sys.WORD_SIZE)")
+    fmiCrossCheckFMUDir = string(thisDir, "/fmi-cross-check/fmus/2.0/me/win$(Sys.WORD_SIZE)")
 elseif Sys.islinux()
-    fmiCrossCheckDir = string(thisDir, "/fmi-cross-check/fmus/2.0/me/linux$(Sys.WORD_SIZE)")
+    fmiCrossCheckFMUDir = string(thisDir, "/fmi-cross-check/fmus/2.0/me/linux$(Sys.WORD_SIZE)")
 else
     error("OS not supportet for this tests.")
 end
 
 
-# Clone or checkout fmi-cross-check repository
 """
     updateFMICrossTest()
 
 Clone or fetch and pull modelica/fmi-cross-check repository from
 https://github.com/modelica/fmi-cross-check.git.
 """
-function updateFmiCrossTest()
+function updateFmiCrossCheck()
 
-    if isdir("fmi-cross-check")
+    if isdir(fmiCrossCheckDir)
         # Update repository
+        println("Updating repository modelica/fmi-cross-check.")
         repo = GitRepo(string(thisDir,"/fmi-cross-check"))
         LibGit2.fetch(repo)
-        LibGit2.update!(repo, ".*")
+        LibGit2.merge!(repo, fastforward=true)
 
     else
         # Clone repository
-        print("Cloning repository modelica/fmi-cross-check.")
-        println("This may take some time.")
-        LibGit2.clone(https://github.com/modelica/fmi-cross-check.git)
+        println("Cloning repository modelica/fmi-cross-check.")
+        println("This may take some minutes.")
+        LibGit2.clone("https://github.com/modelica/fmi-cross-check.git", fmiCrossCheckDir )
+        prinltn("Cloned modelica/fmi-cross-check successfully.")
     end
 end
 
+"""
+    cleanFmiCrossCheck()
+
+Resets fmi-cross-check repository. All changes will get lost!
+"""
+function cleanFmiCrossCheck()
+
+    if isdir(fmiCrossCheckDir)
+        repo = GitRepo(string(thisDir,"/fmi-cross-check"))
+        head_oid = LibGit2.head_oid(repo)
+        mode = LibGit2.Consts.RESET_HARD
+        LibGit2.reset!(repo, head_oid, mode)
+        println("")
+    end
+end
 
 """
     runFMICrossTests()
@@ -48,10 +66,9 @@ Run and test all fmi-cross-test that are supportet on current system.
 function runFMICrossTests()
 
     # Check if repository is up to date
-    updateFmiCrossTest()
+    updateFmiCrossCheck()
 
     @testset "FMI Cross Check" begin
-        updateFmiCrossTest()
         # Windows tests
         if Sys.iswindows()
             @testset "Catia" begin
@@ -244,24 +261,11 @@ function testTool(toolName::String, versions::Array{String,1}, tests)
             for test in tests[i,:]
                 if test != ""
                     @test begin
-                        model = string(fmiCrossCheckDir, "/$toolName/$version/$test/$test.fmu")
+                        model = string(fmiCrossCheckFMUDir, "/$toolName/$version/$test/$test.fmu")
                         main(model)
                     end;
                 end
             end
         end;
     end
-end
-
-"""
-
-Cleans up temoprary files created while testing.
-"""
-function cleanUpTests()
-
-    # Git clean in fmi-cross-check
-    repo = GitRepo(string(thisDir,"/fmi-cross-check"))
-    head_oid = LibGit2.head_oid(repo)
-    mode = LibGit2.Consts.RESET_HARD
-    LibGit2.reset!(repo, head_oid, mode)
 end
