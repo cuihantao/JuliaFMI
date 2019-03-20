@@ -779,7 +779,7 @@ function main(pathToFMU::String)
         fmi2SetupExperiment(fmu, 0)
 
         # Set start time
-        setTime!(fmu, 0.0, true)
+        setTime!(fmu, fmu.experimentData.startTime, true)
         nextTime = fmu.experimentData.stopTime
 
         # Set initial variables with intial="exact" or "approx"
