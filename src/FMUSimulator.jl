@@ -9,17 +9,6 @@ using LightXML      # For parsing XML files
 export main
 
 include("FMIWrapper.jl")
-
-# Macro to identify logger library
-macro libLogger()
-    if Sys.iswindows()
-        return joinpath(dirname(dirname(Base.source_path())),"bin", "win64", "logger.dll")
-    elseif Sys.islinux()
-        return joinpath(dirname(dirname(Base.source_path())),"bin", "unix64", "logger.so")
-    else
-        error("OS not supportet")
-    end
-end
 include("EventHandling.jl")
 
 """
