@@ -152,7 +152,7 @@ function testJModelicaFMUs()
         error("Test only supportet on 64 bit Linux.")
     end
 
-    toolName = "Jmodelica.org"
+    toolName = "JModelica.org"
     versions = ["1.15"]
     tests = ["CauerLowPassAnalog" "ControlledTemperature" "CoupledClutches" "PID_Controller"]
 
@@ -260,7 +260,7 @@ function testTool(toolName::String, versions::Array{String,1}, tests)
         @testset "$version" begin
             for test in tests[i,:]
                 if test != ""
-                    @test_broken begin
+                    @test begin
                         model = joinpath(fmiCrossCheckFMUDir, "$toolName", "$version", "$test", "$test.fmu")
                         main(model)
                     end;

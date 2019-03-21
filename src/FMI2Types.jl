@@ -292,6 +292,17 @@ struct RealProperties
     # Inner constructors
     RealProperties() = new()
     RealProperties(declaredType, variableAttributes, start, derivative, reinit) = new(declaredType, variableAttributes, start, derivative, reinit)
+    function RealProperties(declaredType, variableAttributes, start, derivative, reinit_in::String)
+        if reinit_in == "true"
+            reinit = true
+        elseif reinit_in == "false"
+            reinit = false
+        else
+            error("Could not parste input reinit=$reinit_in to Bool.")
+        end
+
+        return new(declaredType, variableAttributes, start, derivative, reinit)
+    end
 end
 
 struct IntegerProperties
