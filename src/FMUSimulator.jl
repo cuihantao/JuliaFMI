@@ -471,17 +471,17 @@ function loadFMU(pathToFMU::String, useTemp::Bool=false, overWriteTemp::Bool=tru
     fmu.libHandle = dlopen(pathToDLL)
 
     # Load logger function
-    # fmu.libLoggerHandle = dlopen(@libLogger)
-    # fmi2CallbacLogger_Cfunc = dlsym(fmu.libLoggerHandle, :logger)
+    fmu.libLoggerHandle = dlopen(@libLogger)
+    fmi2CallbacLogger_Cfunc = dlsym(fmu.libLoggerHandle, :logger)
 
-    fmi2CallbacLogger_funcWrapC = @cfunction(fmi2CallbackLogger, Cvoid,
-       (Ptr{Cvoid}, Cstring, Cint, Cstring, Tuple{Ptr{UInt8}}))
+    # fmi2CallbacLogger_funcWrapC = @cfunction(fmi2CallbackLogger, Cvoid,
+       # (Ptr{Cvoid}, Cstring, Cint, Cstring, Tuple{Ptr{UInt8}}))
     fmi2AllocateMemory_funcWrapC = @cfunction(fmi2AllocateMemory, Ptr{Cvoid}, (Csize_t, Csize_t))
     fmi2FreeMemory_funcWrapC = @cfunction(fmi2FreeMemory, Cvoid, (Ptr{Cvoid},))
 
     fmi2Functions = CallbackFunctions(
-        fmi2CallbacLogger_funcWrapC,       # Logger in Julia
-        # fmi2CallbacLogger_Cfunc,            # Logger in C
+        # fmi2CallbacLogger_funcWrapC,       # Logger in Julia
+        fmi2CallbacLogger_Cfunc,            # Logger in C
         fmi2AllocateMemory_funcWrapC,
         fmi2FreeMemory_funcWrapC,
         C_NULL,
@@ -508,6 +508,7 @@ function unloadFMU(fmu::FMU, deleteTmpFolder=true::Bool)
     # unload FMU dynamic library
     dlclose(fmu.libHandle)
 
+    dlclose(fmu.libLoggerHandle)
     # delete tmp folder
     if deleteTmpFolder
         rm(fmu.tmpFolder, recursive=true, force=true);
