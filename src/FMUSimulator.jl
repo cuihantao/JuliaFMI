@@ -242,6 +242,15 @@ function readModelDescription(pathToModelDescription::String)
                             tmp_start = parse(Bool, tmp_start)
                         end
                         tmp_typeSpecificProperties = BooleanProperties(tmp_declaredType, tmp_start)
+                    elseif name(child)=="Enumeration"
+                        tmp_declaredType = "Enumeration"
+                        tmp_start = attribute(child, "start"; required=false)
+                        if tmp_start == nothing
+                            tmp_start = false
+                        else
+                            tmp_start = parse(Int, tmp_start)
+                        end
+                        tmp_typeSpecificProperties = EnumerationProperties(tmp_declaredType, tmp_start)
                     elseif name(child)=="String"
                         error("Type \"String\" not implemented.")
                     else
@@ -293,6 +302,9 @@ function modelDescriptionToModelData(modelDescription::ModelDescription)
             modelData.numberOfBools += 1
         elseif typeof(var.typeSpecificProperties)==StringProperties
             modelData.numberOfStrings += 1
+        elseif typeof(var.typeSpecificProperties)==EnumerationProperties
+            modelData.numberOfEnumerations += 1
+
         else
             error()
         end
@@ -348,10 +360,10 @@ function initializeSimulationData(modelDescription::ModelDescription,
                                scalarVar.name)
         elseif typeof(scalarVar.typeSpecificProperties) == EnumerationProperties
             error("Enumeration variables not implemeted!")
-            #i_enumertion += 1
+            # i_enumertion += 1
             # TODO add enumerations here
-            #simulationData.modelVariables.enumerations[i_enumertion] =
-            #    EnumerationVariable()
+            # simulationData.modelVariables.enumerations[i_enumertion] =
+               # EnumerationVariable()
         else
             error("Unknown scalar variable type $(typeof(scalarVar.typeSpecificProperties)).")
         end
@@ -371,7 +383,6 @@ function initializeSimulationData(modelDescription::ModelDescription,
 
     return simulationData
 end
-
 
 """
 `loadFMU(pathToFMU::String, useTemp::Bool=false, overWriteTemp::Bool=true)`
@@ -424,9 +435,9 @@ function loadFMU(pathToFMU::String, useTemp::Bool=false, overWriteTemp::Bool=tru
         pathToDLL = joinpath(fmu.tmpFolder, "binaries", "linux$(Sys.WORD_SIZE)", string(name, ".so"))
     elseif Sys.isapple()
         pathToDLL = joinpath(fmu.tmpFolder, "binaries", "darwin$(Sys.WORD_SIZE)", string(name, ".dylib"))
-        println(pathToDLL)
+        @debug pathToDLL
     else
-        error("OS not supported!")
+        @error "OS not supported!"
     end
 
     if !isfile(pathToDLL)
@@ -459,17 +470,18 @@ function loadFMU(pathToFMU::String, useTemp::Bool=false, overWriteTemp::Bool=tru
     # push!(DL_LOAD_PATH, "/usr/lib/x86_64-linux-gnu") maybe???
     fmu.libHandle = dlopen(pathToDLL)
 
-    # Load hared library with logger function
-    fmu.libLoggerHandle = dlopen(@libLogger)
-    fmi2CallbacLogger_Cfunc = dlsym(fmu.libLoggerHandle, :logger)
-    # fmi2CallbacLogger_funcWrapC = @cfunction(fmi2CallbackLogger, Cvoid,
-    #    (Ptr{Cvoid}, Cstring, Cuint, Cstring, Tuple{Cstring}))
+    # Load logger function
+    # fmu.libLoggerHandle = dlopen(@libLogger)
+    # fmi2CallbacLogger_Cfunc = dlsym(fmu.libLoggerHandle, :logger)
+
+    fmi2CallbacLogger_funcWrapC = @cfunction(fmi2CallbackLogger, Cvoid,
+       (Ptr{Cvoid}, Cstring, Cint, Cstring, Tuple{Ptr{UInt8}}))
     fmi2AllocateMemory_funcWrapC = @cfunction(fmi2AllocateMemory, Ptr{Cvoid}, (Csize_t, Csize_t))
     fmi2FreeMemory_funcWrapC = @cfunction(fmi2FreeMemory, Cvoid, (Ptr{Cvoid},))
 
     fmi2Functions = CallbackFunctions(
-        #fmi2CallbacLogger_funcWrapC,       # Logger in Julia
-        fmi2CallbacLogger_Cfunc,            # Logger in C
+        fmi2CallbacLogger_funcWrapC,       # Logger in Julia
+        # fmi2CallbacLogger_Cfunc,            # Logger in C
         fmi2AllocateMemory_funcWrapC,
         fmi2FreeMemory_funcWrapC,
         C_NULL,
@@ -485,7 +497,6 @@ function loadFMU(pathToFMU::String, useTemp::Bool=false, overWriteTemp::Bool=tru
     return fmu
 end
 
-
 """
 ```
     unloadFMU(fmu::FMU, [deleteTmpFolder=true::Bool])
@@ -496,9 +507,6 @@ function unloadFMU(fmu::FMU, deleteTmpFolder=true::Bool)
 
     # unload FMU dynamic library
     dlclose(fmu.libHandle)
-
-    # unload C logger
-    dlclose(fmu.libLoggerHandle)
 
     # delete tmp folder
     if deleteTmpFolder
@@ -528,14 +536,14 @@ function my_unzip(target::String, destinationDir::String)
     try
         #use unzip
         run(Cmd(`unzip -qo $target`, dir = destinationDir))
-        println("Extracted FMU to $destinationDir")
+        @info "Extracted FMU to $destinationDir"
     catch
         try
             #use 7-zip
             run(Cmd(`"C:\\Program Files\\7-Zip\\7z.exe" x $target -aoa -o$destinationDir`));
-            println("Extracted FMU to $destinationDir")
+            @info "Extracted FMU to $destinationDir"
         catch
-            error("Could not unzip file \"$target\"")
+            @error "Could not unzip file \"$target\""
         end
     end
 end
@@ -777,11 +785,11 @@ function main(pathToFMU::String)
 
         # Get types platform
         typesPlatform = fmi2GetTypesPlatform(fmu)
-        println("typesPlatform: $typesPlatform")
+        @info "typesPlatform: $typesPlatform"
 
         # Get version of fmi
         fmiVersion = fmi2GetVersion(fmu)
-        println("FMI version: $fmiVersion")
+        @info "FMI version: $fmiVersion"
 
         # Set up experiment
         fmi2SetupExperiment(fmu, 0)
@@ -866,12 +874,13 @@ function main(pathToFMU::String)
         fmi2Terminate(fmu)
 
         # Free FMU
-        fmi2FreeInstance(fmu)
+        # fmi2FreeInstance(fmu)
     finally
         # Unload FMU
-        println("Unload FMU")
+        @info "Unload FMU"
         unloadFMU(fmu)
     catch
         rethrow()
     end
+    true
 end

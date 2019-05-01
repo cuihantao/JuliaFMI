@@ -1,6 +1,7 @@
 """
 Run tests from fmi-cross-check Git repository.
 """
+# ENV["JULIA_DEBUG"] = "all"
 
 using Test
 using LibGit2
@@ -31,17 +32,17 @@ function updateFmiCrossCheck()
 
     if isdir(fmiCrossCheckDir)
         # Update repository
-        println("Updating repository modelica/fmi-cross-check.")
+        @info ("Updating repository modelica/fmi-cross-check.")
         repo = GitRepo(fmiCrossCheckDir)
         LibGit2.fetch(repo)
         LibGit2.merge!(repo, fastforward=true)
 
     else
         # Clone repository
-        println("Cloning repository modelica/fmi-cross-check.")
-        println("This may take some minutes.")
+        @info ("Cloning repository modelica/fmi-cross-check.")
+        @info ("This may take some minutes.")
         LibGit2.clone("https://github.com/modelica/fmi-cross-check.git", fmiCrossCheckDir )
-        println("Cloned modelica/fmi-cross-check successfully.")
+        @info ("Cloned modelica/fmi-cross-check successfully.")
     end
 end
 
@@ -148,7 +149,7 @@ Tests version 1.15 on 64 bit Linux.
 * CoupledClutches
 * PID_Controller
 """
-function testJModelicaFMUs()
+function testJModelicaFMUs(tests::Union{Array{String, 1}, Nothing}=nothing)
 
     if !Sys.islinux() || Sys.WORD_SIZE != 64
         error("Test only supportet on 64 bit Linux.")
@@ -156,7 +157,9 @@ function testJModelicaFMUs()
 
     toolName = "JModelica.org"
     versions = ["1.15"]
-    tests = ["CauerLowPassAnalog" "ControlledTemperature" "CoupledClutches" "PID_Controller"]
+    if tests == nothing
+        tests = ["CauerLowPassAnalog" "ControlledTemperature" "CoupledClutches" "PID_Controller"]
+    end
 
     testTool(toolName, versions, tests)
 end
@@ -236,7 +239,7 @@ Tested version 0.0.1 on 64 bit Linux or Windows
 # Tests
 *
 """
-function testTestFMUsFMUs()
+function testTestFMUsFMUs(tests::Union{Array{String, 1}, Nothing}=nothing)
 
     if Sys.WORD_SIZE != 64
         error("Test only supportet on 64 bit Linux or Windows.")
@@ -245,8 +248,9 @@ function testTestFMUsFMUs()
     toolName = "Test-FMUs"
     versions = ["0.0.1"]
 
-    tests = ["BouncingBall" "Dahlquist" "Feedthrough" "Resource" "Stair" "VanDerPol"]
-
+    if tests == nothing
+        tests = ["BouncingBall" "Dahlquist" "Feedthrough" "Resource" "Stair" "VanDerPol"]
+    end
     testTool(toolName, versions, tests)
 end
 

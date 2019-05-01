@@ -205,11 +205,12 @@ mutable struct ModelData
     numberOfInts::Int
     numberOfBools::Int
     numberOfStrings::Int
+    numberOfEnumerations::Int
     numberOfExterns::Int
 
     numberOfEventIndicators::Int
 
-    ModelData() = new(0,0,0,0,0,0,0,0)
+    ModelData() = new(0,0,0,0,0,0,0,0,0)
 end
 
 mutable struct ExperimentData
@@ -282,6 +283,16 @@ struct IntegerAttributes
 end
 
 
+struct EnumerationAttributes
+    quantity::String
+    min::Int
+    max::Int
+
+    # Inner constructors
+    EnumerationAttributes()=new()
+    EnumerationAttributes(quantity, min, max)=new(quantity, min, max)
+end
+
 struct RealProperties
     declaredType::String
     variableAttributes::RealAttributes
@@ -315,12 +326,29 @@ struct IntegerProperties
     IntegerProperties(declaredType, variableAttributes, start) = new(declaredType, variableAttributes, start)
 end
 
+struct EnumerationProperties
+    declaredType::String
+    start::Int
+
+    # Inner constructors
+    EnumerationProperties() = new()
+    EnumerationProperties(declaredType, start) = new(declaredType, start)
+end
+
 struct BooleanProperties
     declaredType::String
     start::Bool
 
     BooleanProperties() = new()
     BooleanProperties(declaredType, start) = new(declaredType, start)
+end
+
+struct StringProperties
+    declaredType::String
+    start::Bool
+
+    StringProperties() = new()
+    StringProperties(declaredType, start) = new(declaredType, start)
 end
 
 struct ScalarVariable
@@ -335,7 +363,8 @@ struct ScalarVariable
     canHandleMultipleSetPerTimelnstant::Bool
 
     # Type specific properties of ScalarVariable
-    typeSpecificProperties::Union{RealProperties, IntegerProperties, BooleanProperties}
+    typeSpecificProperties::Union{RealProperties, IntegerProperties, BooleanProperties,
+                                  EnumerationProperties, StringProperties}
 
     # Inner constructors
     function ScalarVariable(name, valueReference, description, typeSpecificProperties)

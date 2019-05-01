@@ -22,6 +22,8 @@ used for compilation of the functions of the FMU.
 Standard type is "default".
 """
 function fmi2GetTypesPlatform(libHandle::Ptr{Nothing})
+    @debug "Entering fmi2GetTypesPlatform"
+
     func = dlsym(libHandle, :fmi2GetTypesPlatform)
 
     typesPlatform = ccall(
@@ -49,6 +51,8 @@ compile the functions of the FMU.
 Standard type is "2.0"
 """
 function fmi2GetVersion(libHandle::Ptr{Nothing})
+    @debug "Entering fmi2GetVersion"
+
     func = dlsym(libHandle, :fmi2GetVersion)
 
     version = ccall(
@@ -92,7 +96,9 @@ modelExchange, fmu.fmuGUID, fmu.fmuResourceLocation, fmu.callbackFunctions, fals
 """
 function fmi2Instantiate(libHandle::Ptr{Nothing}, instanceName::String,
     fmuType::fmuType, fmuGUID::String, fmuResourceLocation::String,
-    functions::CallbackFunctions, visible::Bool=true, loggingOn::Bool=false)
+    functions::CallbackFunctions, visible::Bool=true, loggingOn::Bool=true)
+
+    @debug "Entering fmi2Instantiate"
 
     func = dlsym(libHandle, :fmi2Instantiate)
 
@@ -131,6 +137,7 @@ of the FMU interface. If a null pointer is provided for `fmi2Component`,
 the function call is ignored (does not have an effect).
 """
 function fmi2FreeInstance(libHandle::Ptr{Nothing}, fmi2Component::Ptr{Nothing})
+    @debug "Entering fmi2FreeInstance"
 
     func = dlsym(libHandle, :fmi2FreeInstance)
 
@@ -162,6 +169,7 @@ logger function.
 """
 function fmi2SetDebugLogging(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, loggingOn::Bool)
+    @debug "Entering fmi2SetDebugLogging"
 
     func = dlsym(libHandle, :fmi2SetDebugLogging)
 
@@ -180,6 +188,7 @@ end
 function fmi2SetDebugLogging(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, loggingOn::Bool, nCategories::UInt,
     categories::Array{String,1})
+    @debug "Entering fmi2SetDebugLogging"
 
     if length(categories) != nCategories
         throw(DimensionMismatch("nCategories=$nCategories does not match length(categories)=$(length(categories))"))
@@ -256,6 +265,7 @@ Informs the `FMU` to setup the experiment. This function can be called after
 function fmi2SetupExperiment(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, toleranceDefined::Bool, tolerance::Real,
     startTime::Real, stopTimeDefined::Bool=false, stopTime::Real=startTime+1)
+    @debug "Entering fmi2SetupExperiment"
 
     func = dlsym(libHandle, :fmi2SetupExperiment)
 
@@ -309,6 +319,7 @@ set with the `fmi2SetReal`, `fmi2SetInteger`, `fmi2SetBoolean` and
 """
 function fmi2EnterInitializationMode(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing})
+    @debug "Entering fmi2EnterInitializationMode"
 
     func = dlsym(libHandle, :fmi2EnterInitializationMode)
 
@@ -340,6 +351,7 @@ Informs the FMU to exit Initialization Mode.
 """
 function fmi2ExitInitializationMode(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing})
+    @debug "Entering fmi2ExitInitializationMode"
 
     func = dlsym(libHandle, :fmi2ExitInitializationMode)
 
@@ -375,6 +387,7 @@ functions returned with a status `fmi2Error` or `fmi2Fatal`.
 """
 function fmi2Terminate(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing})
+    @debug "Entering fmi2Terminate"
 
     func = dlsym(libHandle, :fmi2Terminate)
 
@@ -409,6 +422,7 @@ values. Before starting a new run, `fmi2SetupExperiment` and
 """
 function fmi2Reset(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing})
+    @debug "Entering fmi2Reset"
 
     func = dlsym(libHandle, :fmi2Reset)
 
@@ -458,6 +472,7 @@ julia> println("value: \$value")
 function fmi2GetReal!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, valueReference::Array{UInt32,1},
     numberOfValueReference::Int, value::Array{Float64,1})
+    @debug "Entering fmi2GetReal"
 
     if size(valueReference) != size(value)
         throw(DimensionMismatch("Arrays valueReference and value are not the same size."))
@@ -548,6 +563,9 @@ julia> println("value: \$value")
 function fmi2GetInteger!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, valueReference::Array{UInt32,1},
     numberOfValueReference::Int, value::Array{Int32,1})
+    @debug "Entering fmi2GetInteger"
+
+    # numberOfValueReference = convert(Csize_t, numberOfValueReference)
 
     if size(valueReference) != size(value)
         throw(DimensionMismatch("Arrays valueReference and value are not the same size."))
@@ -562,7 +580,7 @@ function fmi2GetInteger!(libHandle::Ptr{Nothing},
         func,
         Cuint,
         (Ptr{Cvoid}, Ref{Cuint}, Csize_t, Ref{Cint}),
-        fmi2Component, valueReference, numberOfValeReference, value
+        fmi2Component, valueReference, numberOfValueReference, value
         )
 
     if status != 0
@@ -581,17 +599,17 @@ function fmi2GetInteger!(libHandle::Ptr{Nothing},
 end
 
 function fmi2GetInteger!(fmu::FMU, valueReference::Union{Array{UInt32,1}, Array{UInt64,1}, Array{Int,1}},
-    numberOfValueReference::Int, value::Array{Int32,1})
+    numberOfValueReference::Int, value::Union{Array{Int32,1}, Array{Int64,1}})
 
     return fmi2GetInteger!(fmu.libHandle, fmu.fmi2Component,
-        convert(Array{UInt32,1},valueReference), numberOfValueReference, value)
+        convert(Array{UInt32,1},valueReference), numberOfValueReference, convert(Array{Int32, 1}, value))
 end
 
 function fmi2GetInteger!(fmu::FMU, valueReference::Union{Array{UInt32,1}, Array{UInt64,1}, Array{Int,1}},
-    value::Array{Int32,1})
+    value::Union{Array{Int32,1}, Array{Int64,1}})
 
     return fmi2GetInteger!(fmu.libHandle, fmu.fmi2Component,
-        convert(Array{UInt32,1},valueReference), length(valueReference), value)
+        convert(Array{UInt32,1},valueReference), length(valueReference), convert(Array{Int32, 1}, value))
 end
 
 """
@@ -639,6 +657,7 @@ julia> println("value: \$value")
 function fmi2GetBoolean!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, valueReference::Array{UInt32,1},
     numberOfValueReference::Int, value::Array{Int32,1})
+    @debug "Entering fmi2GetBoolean"
 
     if size(valueReference) != size(value)
         throw(DimensionMismatch("Arrays valueReference and value are not the same size."))
@@ -738,6 +757,7 @@ julia> println("value: \$value")
 function fmi2GetString!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, valueReference::Array{UInt32,1},
     numberOfValueReference::Int, value::Array{String,1})
+    @debug "Entering fmi2GetString"
 
     if size(valueReference) != size(value)
         throw(DimensionMismatch("Arrays valueReference and value are not the same size."))
@@ -752,7 +772,7 @@ function fmi2GetString!(libHandle::Ptr{Nothing},
         func,
         Cuint,
         (Ptr{Cvoid}, Ref{Cuint}, Csize_t, Ref{Cstring}),
-        fmi2Component, valueReference, numberOfValeReference, value
+        fmi2Component, valueReference, numberOfValueReference, value
         )
 
     if status != 0
@@ -838,6 +858,7 @@ julia> fmi2SetReal(fmu, [0, 1, 2], [1.2,3.4,-1.0])
 function fmi2SetReal(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, valueReference::Array{UInt32,1},
     numberOfValueReference::Int, value::Array{Float64,1})
+    @debug "Entering fmi2SetReal"
 
     if size(valueReference) != size(value)
         throw(DimensionMismatch("Arrays valueReference and value are not the same size."))
@@ -918,6 +939,7 @@ function fmi2SetInteger(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, valueReference::Array{UInt32,1},
     numberOfValueReference::Int, value::Array{Int32,1})
 
+    @debug "Entering fmi2SetInteger"
     if size(valueReference) != size(value)
         throw(DimensionMismatch("Arrays valueReference and value are not the same size."))
     elseif (length(valueReference) != numberOfValueReference)
@@ -931,7 +953,7 @@ function fmi2SetInteger(libHandle::Ptr{Nothing},
         func,
         Cuint,
         (Ptr{Cvoid}, Ref{Cuint}, Csize_t, Ref{Cint}),
-        fmi2Component, valueReference, numberOfValeReference, value
+        fmi2Component, valueReference, numberOfValueReference, value
         )
 
     if status != 0
@@ -996,6 +1018,7 @@ julia> fmi2SetBoolean(fmu, [0, 1, 2], [true, false, false])
 function fmi2SetBoolean(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, valueReference::Array{UInt32,1},
     numberOfValueReference::Int, value::Array{Int32,1})
+    @debug "Entering fmi2SetBoolean"
 
     if size(valueReference) != size(value)
         throw(DimensionMismatch("Arrays valueReference and value are not the same size."))
@@ -1010,7 +1033,7 @@ function fmi2SetBoolean(libHandle::Ptr{Nothing},
         func,
         Cuint,
         (Ptr{Cvoid}, Ref{Cuint}, Csize_t, Ref{Cint}),
-        fmi2Component, valueReference, numberOfValeReference, value
+        fmi2Component, valueReference, numberOfValueReference, value
         )
 
     if status != 0
@@ -1082,6 +1105,7 @@ julia> fmi2SetString(fmu, [0, 1, 2], [\"Hello\", \"FMU\", \"Julia\"])
 function fmi2SetString(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, valueReference::Array{UInt32,1},
     numberOfValueReference::Int, value::Array{String,1})
+    @debug "Entering fmi2SetString"
 
     if size(valueReference) != size(value)
         throw(DimensionMismatch("Arrays valueReference and value are not the same size."))
@@ -1096,7 +1120,7 @@ function fmi2SetString(libHandle::Ptr{Nothing},
         func,
         Cuint,
         (Ptr{Cvoid}, Ref{Cuint}, Csize_t, Ref{Cstring}),
-        fmi2Component, valueReference, numberOfValeReference, value
+        fmi2Component, valueReference, numberOfValueReference, value
         )
 
     if status != 0
@@ -1246,6 +1270,7 @@ time value
 """
 function fmi2SetTime(libHandle::Ptr{Nothing}, fmi2Component::Ptr{Nothing},
     time::Float64)
+    @debug "Entering fmi2SetTime"
 
     func = dlsym(libHandle, :fmi2SetTime)
 
@@ -1278,6 +1303,7 @@ and is provided for checking purposes.
 """
 function fmi2SetContinuousStates(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, states::Array{Float64,1}, n_states::Int)
+    @debug "Entering fmi2SetContinuousStates"
 
     if length(states) != n_states
         throw(DimensionMismatch("Array states has not length $(length(states)).
@@ -1326,6 +1352,7 @@ end
 The model enters Event Mode from the Continuous-Time Mode.
 """
 function fmi2EnterEventMode(libHandle::Ptr{Nothing}, fmi2Component::Ptr{Nothing})
+    @debug "Entering fmi2EnterEventMode"
 
     func = dlsym(libHandle, :fmi2EnterEventMode)
 
@@ -1357,6 +1384,7 @@ The FMU is in Event Mode and the super dense time is incremented by this call.
 """
 function fmi2NewDiscreteStates!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, fmi2EventInfo::EventInfo)
+    @debug "Entering fmi2NewDiscreteStates"
 
     func = dlsym(libHandle, :fmi2NewDiscreteStates)
 
@@ -1393,6 +1421,7 @@ Continuous-Time Mode.
 """
 function fmi2EnterContinuousTimeMode(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing})
+    @debug "Entering fmi2EnterContinuousTimeMode"
 
     func = dlsym(libHandle, :fmi2EnterContinuousTimeMode)
 
@@ -1428,6 +1457,7 @@ the integrator provided the capability flag
 """
 function fmi2CompletedIntegratorStep(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, noSetFMUStatePriorToCurrentPoint::Bool)
+    @debug "Entering fmi2CompletedIntegratorStep"
 
     func = dlsym(libHandle, :fmi2CompletedIntegratorStep)
 
@@ -1469,6 +1499,7 @@ states.
 function fmi2GetDerivatives!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, derivatives::Array{Float64,1},
     numberOfDerivatives::Int)
+    @debug "Entering fmi2GetDerivatives"
 
     if (length(derivatives) != numberOfDerivatives)
         throw(DimensionMismatch("Wrong numberOfDerivatives.
@@ -1522,6 +1553,7 @@ states.
 function fmi2GetEventIndicators!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, eventIndicators::Array{Float64,1},
     numberOfEventIndiactors::Int)
+    @debug "Entering fmi2GetEventIndicators"
 
     if (length(eventIndicators) != numberOfEventIndiactors)
         throw(DimensionMismatch("Wrong numberOfEventIndiactors.
@@ -1577,6 +1609,7 @@ This function has to be called directly after calling function
 """
 function fmi2GetContinuousStates!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, states::Array{Float64,1}, n_states::Int)
+    @debug "Entering fmi2GetContinuousStates"
 
     if length(states) != n_states
         throw(DimensionMismatch("Wrong n_states.
@@ -1631,6 +1664,7 @@ values of the continuous states have changed.
 """
 function fmi2GetNominalsOfContinuousStates!(libHandle::Ptr{Nothing},
     fmi2Component::Ptr{Nothing}, x_nominal::Array{Float64,1}, n_nominal::Int)
+    @debug "Entering fmi2GetNominalsOfContinuousStates"
 
     if length(x_nominal) != n_nominal
         throw(DimensionMismatch("Wrong n_nominal.
